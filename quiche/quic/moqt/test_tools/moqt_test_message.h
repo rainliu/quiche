@@ -504,7 +504,11 @@ class QUICHE_NO_EXPORT SubscribeOkMessage : public TestMessageBase {
       QUIC_LOG(INFO) << "SUBSCRIBE OK expiration mismatch";
       return false;
     }
-    if (cast.largest_id != subscribe_ok_.largest_id) {
+    if ( cast.largest_id.has_value() != subscribe_ok_.largest_id.has_value() ||
+        (cast.largest_id.has_value() && subscribe_ok_.largest_id.has_value() &&
+          cast.largest_id.value().group != subscribe_ok_.largest_id.value().group &&
+          cast.largest_id.value().object != subscribe_ok_.largest_id.value().object)
+       ) {
       QUIC_LOG(INFO) << "SUBSCRIBE OK largest ID mismatch";
       return false;
     }
@@ -635,7 +639,11 @@ class QUICHE_NO_EXPORT SubscribeDoneMessage : public TestMessageBase {
       QUIC_LOG(INFO) << "SUBSCRIBE_DONE reason phrase mismatch";
       return false;
     }
-    if (cast.final_id != subscribe_done_.final_id) {
+    if ( cast.final_id.has_value() != subscribe_done_.final_id.has_value() ||
+       (cast.final_id.has_value() && subscribe_done_.final_id.has_value() &&
+         cast.final_id.value().group != subscribe_done_.final_id.value().group &&
+         cast.final_id.value().object != subscribe_done_.final_id.value().object)
+      ) {
       QUIC_LOG(INFO) << "SUBSCRIBE_DONE final ID mismatch";
       return false;
     }

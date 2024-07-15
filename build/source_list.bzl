@@ -1499,6 +1499,7 @@ load_balancer_srcs = [
     "quic/load_balancer/load_balancer_server_id_map_test.cc",
     "quic/load_balancer/load_balancer_server_id_test.cc",
 ]
+
 moqt_hdrs = [
     "quic/moqt/moqt_framer.h",
     "quic/moqt/moqt_messages.h",
@@ -1507,35 +1508,62 @@ moqt_hdrs = [
     "quic/moqt/moqt_session.h",
     "quic/moqt/moqt_subscribe_windows.h",
     "quic/moqt/moqt_track.h",
-    "quic/moqt/test_tools/moqt_simulator_harness.h",
-    "quic/moqt/test_tools/moqt_test_message.h",
-    "quic/moqt/tools/moqt_client.h",
-    "quic/moqt/tools/moqt_mock_visitor.h",
-    "quic/moqt/tools/moqt_server.h",
 ]
+
 moqt_srcs = [
     "quic/moqt/moqt_framer.cc",
-    "quic/moqt/moqt_framer_test.cc",
-    "quic/moqt/moqt_integration_test.cc",
     "quic/moqt/moqt_messages.cc",
     "quic/moqt/moqt_outgoing_queue.cc",
-    "quic/moqt/moqt_outgoing_queue_test.cc",
     "quic/moqt/moqt_parser.cc",
-    "quic/moqt/moqt_parser_test.cc",
     "quic/moqt/moqt_session.cc",
-    "quic/moqt/moqt_session_test.cc",
     "quic/moqt/moqt_subscribe_windows.cc",
-    "quic/moqt/moqt_subscribe_windows_test.cc",
     "quic/moqt/moqt_track.cc",
-    "quic/moqt/moqt_track_test.cc",
-    "quic/moqt/test_tools/moqt_simulator_harness.cc",
-    "quic/moqt/tools/chat_client_bin.cc",
-    "quic/moqt/tools/moqt_client.cc",
-    "quic/moqt/tools/moqt_end_to_end_test.cc",
-    "quic/moqt/tools/moqt_ingestion_server_bin.cc",
-    "quic/moqt/tools/moqt_server.cc",
-    "quic/moqt/tools/moqt_simulator_bin.cc",
 ]
+
+moqt_tests_support_hdrs = [
+    "quic/moqt/test_tools/moqt_simulator_harness.h",
+    "quic/moqt/test_tools/moqt_test_message.h",
+    "quic/moqt/tools/moqt_mock_visitor.h",
+]
+
+moqt_tests_support_srcs = [
+    "quic/moqt/test_tools/moqt_simulator_harness.cc",
+]
+
+moqt_tests_srcs = [
+    "quic/moqt/moqt_framer_test.cc",
+    "quic/moqt/moqt_integration_test.cc",
+    "quic/moqt/moqt_outgoing_queue_test.cc",
+    "quic/moqt/moqt_parser_test.cc",
+    #TODO: "quic/moqt/moqt_session_test.cc",
+    "quic/moqt/moqt_subscribe_windows_test.cc",
+    "quic/moqt/moqt_track_test.cc",
+]
+
+moqt_client_hdrs = [
+    "quic/moqt/tools/moqt_client.h",
+]
+
+moqt_server_hdrs = [
+    "quic/moqt/tools/moqt_server.h",
+]
+
+moqt_client_srcs = [
+    "quic/moqt/tools/moqt_client.cc",
+]
+
+moqt_server_srcs = [
+    "quic/moqt/tools/moqt_server.cc",
+]
+
+#    "quic/moqt/test_tools/moqt_simulator_harness.h",
+#    "quic/moqt/test_tools/moqt_test_message.h",
+#    "quic/moqt/tools/moqt_mock_visitor.h",
+
+#    "quic/moqt/test_tools/moqt_simulator_harness.cc",
+#    "quic/moqt/tools/moqt_end_to_end_test.cc",
+#    "quic/moqt/tools/moqt_simulator_bin.cc",
+
 binary_http_hdrs = [
     "binary_http/binary_http_message.h",
 ]

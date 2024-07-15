@@ -23,7 +23,7 @@
 
 namespace moqt {
 
-inline constexpr quic::ParsedQuicVersionVector GetMoqtSupportedQuicVersions() {
+inline quic::ParsedQuicVersionVector GetMoqtSupportedQuicVersions() {
   return quic::ParsedQuicVersionVector{quic::ParsedQuicVersion::RFCv1()};
 }
 
@@ -140,6 +140,8 @@ H AbslHashValue(H h, const FullTrackName& m) {
 struct FullSequence {
   uint64_t group = 0;
   uint64_t object = 0;
+  FullSequence(uint64_t group, uint64_t object) : group(group), object(object) {}
+  FullSequence() {}
   bool operator==(const FullSequence& other) const {
     return group == other.group && object == other.object;
   }

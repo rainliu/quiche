@@ -277,6 +277,9 @@ class QUICHE_EXPORT MoqtSession : public webtransport::SessionVisitor {
     // If true, an object has arrived for the subscription before SUBSCRIBE_OK
     // arrived.
     bool received_object = false;
+
+    ActiveSubscribe(MoqtSubscribe message, RemoteTrack::Visitor* visitor, std::optional<MoqtForwardingPreference> forwarding_preference = std::nullopt, bool received_object = false)
+        : message(message), visitor(visitor), forwarding_preference(forwarding_preference), received_object(received_object) {}
   };
   // Outgoing SUBSCRIBEs that have not received SUBSCRIBE_OK or SUBSCRIBE_ERROR.
   absl::flat_hash_map<uint64_t, ActiveSubscribe> active_subscribes_;

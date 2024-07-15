@@ -383,7 +383,7 @@ std::optional<webtransport::StreamId> MoqtSession::OpenUnidirectionalStream() {
 std::pair<FullTrackName, RemoteTrack::Visitor*>
 MoqtSession::TrackPropertiesFromAlias(const MoqtObject& message) {
   auto it = remote_tracks_.find(message.track_alias);
-  RemoteTrack::Visitor* visitor = nullptr;
+  //RemoteTrack::Visitor* visitor = nullptr;
   if (it == remote_tracks_.end()) {
     // SUBSCRIBE_OK has not arrived yet, but deliver it.
     auto subscribe_it = active_subscribes_.find(message.subscribe_id);
@@ -392,7 +392,7 @@ MoqtSession::TrackPropertiesFromAlias(const MoqtObject& message) {
           {{"", ""}, nullptr});
     }
     ActiveSubscribe& subscribe = subscribe_it->second;
-    visitor = subscribe.visitor;
+    //visitor = subscribe.visitor;
     subscribe.received_object = true;
     if (subscribe.forwarding_preference.has_value()) {
       if (message.forwarding_preference != *subscribe.forwarding_preference) {

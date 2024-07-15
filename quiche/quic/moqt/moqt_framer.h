@@ -23,7 +23,7 @@ namespace moqt {
 class QUICHE_EXPORT MoqtFramer {
  public:
   MoqtFramer(quiche::QuicheBufferAllocator* allocator, bool using_webtrans)
-      : allocator_(allocator), using_webtrans_(using_webtrans) {}
+      : /*allocator_(allocator),*/ using_webtrans_(using_webtrans) {}
 
   // Serialize functions. Takes structured data and serializes it into a
   // QuicheBuffer for delivery to the stream.
@@ -57,7 +57,7 @@ class QUICHE_EXPORT MoqtFramer {
   quiche::QuicheBuffer SerializeGoAway(const MoqtGoAway& message);
 
  private:
-  quiche::QuicheBufferAllocator* allocator_;
+  //quiche::QuicheBufferAllocator* allocator_;
   bool using_webtrans_;
 };
 
