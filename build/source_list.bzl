@@ -1574,19 +1574,27 @@ moqt_tests_srcs = [
     "quic/moqt/moqt_track_test.cc",
 ]
 
-moqt_client_hdrs = [
+moq_chat_hdrs = [
+    "quic/moqt/tools/moq_chat.h",
+]
+
+chat_client_hdrs = [
+    "quic/moqt/tools/chat_client.h",
     "quic/moqt/tools/moqt_client.h",
 ]
 
-moqt_server_hdrs = [
+chat_server_hdrs = [
+    "quic/moqt/tools/chat_server.h",
     "quic/moqt/tools/moqt_server.h",
 ]
 
-moqt_client_srcs = [
+chat_client_srcs = [
+    "quic/moqt/tools/chat_client.cc",
     "quic/moqt/tools/moqt_client.cc",
 ]
 
-moqt_server_srcs = [
+chat_server_srcs = [
+    "quic/moqt/tools/chat_server.cc",
     "quic/moqt/tools/moqt_server.cc",
 ]
 

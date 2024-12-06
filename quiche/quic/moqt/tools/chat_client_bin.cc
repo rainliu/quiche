@@ -36,7 +36,7 @@ class FileOutput : public moqt::ChatUserInterface {
  public:
   explicit FileOutput(absl::string_view filename, absl::string_view username)
       : username_(username) {
-    output_file_.open(filename);
+    output_file_.open(filename.data());
     output_file_ << "Chat transcript:\n";
     output_file_.flush();
     std::cout << "Fully connected. Messages are in the output file. Exit the "
