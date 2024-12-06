@@ -19,6 +19,15 @@ load(
     "io_tests_srcs",
     "io_tool_support_hdrs",
     "io_tool_support_srcs",
+    "moqt_client_hdrs",
+    "moqt_client_srcs",
+    "moqt_hdrs",
+    "moqt_tests_support_hdrs",
+    "moqt_tests_support_srcs",
+    "moqt_tests_srcs",
+    "moqt_server_hdrs",
+    "moqt_server_srcs",
+    "moqt_srcs",
     "oblivious_http_hdrs",
     "oblivious_http_srcs",
     "quiche_core_hdrs",
@@ -463,6 +472,93 @@ cc_binary(
         ":quic_toy_server",
         ":quiche_core",
         ":quiche_tool_support",
+        "@com_google_absl//absl/strings",
+    ],
+)
+
+cc_library(
+    name = "moqt",
+    srcs = moqt_srcs,
+    hdrs = moqt_hdrs,
+    deps = [
+        ":io_tool_support",
+        ":quiche_core",
+        ":quiche_tool_support",
+        "@com_google_absl//absl/strings",
+    ],
+)
+
+cc_library(
+    name = "moqt_tests_support",
+    testonly = 1,
+    srcs = moqt_tests_support_srcs,
+    hdrs = moqt_tests_support_hdrs,
+    deps = [
+        ":moqt",
+        ":quiche_core",
+        ":quiche_test_support",
+        "@com_google_absl//absl/strings",
+        "@com_google_googletest//:gtest",
+    ],
+)
+
+cc_test(
+    name = "moqt_tests",
+    srcs = moqt_tests_srcs,
+    deps = [
+        ":moqt",
+        ":moqt_tests_support",
+        ":quiche_test_support",
+        ":quiche_core",
+        "@com_google_absl//absl/strings",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "moqt_client_library",
+    srcs = moqt_client_srcs,
+    hdrs = moqt_client_hdrs,
+    deps = [
+        ":moqt",
+        ":quiche_core",
+        "@com_google_absl//absl/strings",
+    ],
+)
+
+cc_binary(
+    name = "moqt_client",
+    srcs = [
+        "quic/moqt/tools/chat_client_bin.cc",
+    ],
+    deps = [
+        ":moqt",
+        ":moqt_client_library",
+        ":quiche_core",
+        "@com_google_absl//absl/strings",
+    ],
+)
+
+cc_library(
+    name = "moqt_server_library",
+    srcs = moqt_server_srcs,
+    hdrs = moqt_server_hdrs,
+    deps = [
+        ":moqt",
+        ":quiche_core",
+        "@com_google_absl//absl/strings",
+    ],
+)
+
+cc_binary(
+    name = "moqt_server",
+    srcs = [
+        "quic/moqt/tools/moqt_ingestion_server_bin.cc",
+    ],
+    deps = [
+        ":moqt",
+        ":moqt_server_library",
+        ":quiche_core",
         "@com_google_absl//absl/strings",
     ],
 )

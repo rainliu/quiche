@@ -345,7 +345,7 @@ TEST_F(MoqtFramerSimpleTest, BadDatagramInput) {
   // No datagrams to SerializeObjectHeader().
   EXPECT_QUIC_BUG(buffer = framer_.SerializeObjectHeader(
                       object, MoqtDataStreamType::kObjectDatagram, false),
-                  "Datagrams use SerializeObjectDatagram()")
+                  "Datagrams use SerializeObjectDatagram()");
   EXPECT_TRUE(buffer.empty());
 
   object.object_status = MoqtObjectStatus::kEndOfGroup;

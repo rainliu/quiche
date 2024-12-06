@@ -1511,6 +1511,7 @@ load_balancer_srcs = [
     "quic/load_balancer/load_balancer_server_id_map_test.cc",
     "quic/load_balancer/load_balancer_server_id_test.cc",
 ]
+
 moqt_hdrs = [
     "quic/moqt/moqt_bitrate_adjuster.h",
     "quic/moqt/moqt_cached_object.h",
@@ -1527,57 +1528,68 @@ moqt_hdrs = [
     "quic/moqt/moqt_session.h",
     "quic/moqt/moqt_subscribe_windows.h",
     "quic/moqt/moqt_track.h",
+]
+
+moqt_srcs = [
+    "quic/moqt/moqt_bitrate_adjuster.cc",
+    "quic/moqt/moqt_cached_object.cc",
+    "quic/moqt/moqt_framer.cc",
+    "quic/moqt/moqt_known_track_publisher.cc",
+    "quic/moqt/moqt_live_relay_queue.cc",
+    "quic/moqt/moqt_messages.cc",
+    "quic/moqt/moqt_outgoing_queue.cc",
+    "quic/moqt/moqt_parser.cc",
+    "quic/moqt/moqt_priority.cc",
+    "quic/moqt/moqt_probe_manager.cc",
+    "quic/moqt/moqt_session.cc",
+    "quic/moqt/moqt_subscribe_windows.cc",
+    "quic/moqt/moqt_track.cc",
+]
+
+moqt_tests_support_hdrs = [
     "quic/moqt/test_tools/moqt_framer_utils.h",
     "quic/moqt/test_tools/moqt_session_peer.h",
     "quic/moqt/test_tools/moqt_simulator_harness.h",
     "quic/moqt/test_tools/moqt_test_message.h",
-    "quic/moqt/tools/chat_client.h",
-    "quic/moqt/tools/chat_server.h",
-    "quic/moqt/tools/moq_chat.h",
-    "quic/moqt/tools/moqt_client.h",
     "quic/moqt/tools/moqt_mock_visitor.h",
-    "quic/moqt/tools/moqt_server.h",
 ]
-moqt_srcs = [
-    "quic/moqt/moqt_bitrate_adjuster.cc",
-    "quic/moqt/moqt_bitrate_adjuster_test.cc",
-    "quic/moqt/moqt_cached_object.cc",
-    "quic/moqt/moqt_framer.cc",
-    "quic/moqt/moqt_framer_test.cc",
-    "quic/moqt/moqt_integration_test.cc",
-    "quic/moqt/moqt_known_track_publisher.cc",
-    "quic/moqt/moqt_live_relay_queue.cc",
-    "quic/moqt/moqt_live_relay_queue_test.cc",
-    "quic/moqt/moqt_messages.cc",
-    "quic/moqt/moqt_messages_test.cc",
-    "quic/moqt/moqt_outgoing_queue.cc",
-    "quic/moqt/moqt_outgoing_queue_test.cc",
-    "quic/moqt/moqt_parser.cc",
-    "quic/moqt/moqt_parser_test.cc",
-    "quic/moqt/moqt_priority.cc",
-    "quic/moqt/moqt_priority_test.cc",
-    "quic/moqt/moqt_probe_manager.cc",
-    "quic/moqt/moqt_probe_manager_test.cc",
-    "quic/moqt/moqt_session.cc",
-    "quic/moqt/moqt_session_test.cc",
-    "quic/moqt/moqt_subscribe_windows.cc",
-    "quic/moqt/moqt_subscribe_windows_test.cc",
-    "quic/moqt/moqt_track.cc",
-    "quic/moqt/moqt_track_test.cc",
+
+moqt_tests_support_srcs = [
     "quic/moqt/test_tools/moqt_framer_utils.cc",
     "quic/moqt/test_tools/moqt_simulator_harness.cc",
-    "quic/moqt/tools/chat_client.cc",
-    "quic/moqt/tools/chat_client_bin.cc",
-    "quic/moqt/tools/chat_server.cc",
-    "quic/moqt/tools/chat_server_bin.cc",
-    "quic/moqt/tools/moq_chat_end_to_end_test.cc",
-    "quic/moqt/tools/moq_chat_test.cc",
-    "quic/moqt/tools/moqt_client.cc",
-    "quic/moqt/tools/moqt_end_to_end_test.cc",
-    "quic/moqt/tools/moqt_ingestion_server_bin.cc",
-    "quic/moqt/tools/moqt_server.cc",
-    "quic/moqt/tools/moqt_simulator_bin.cc",
 ]
+
+moqt_tests_srcs = [
+    "quic/moqt/moqt_bitrate_adjuster_test.cc",
+    "quic/moqt/moqt_framer_test.cc",
+    "quic/moqt/moqt_integration_test.cc",
+    "quic/moqt/moqt_live_relay_queue_test.cc",
+    "quic/moqt/moqt_messages_test.cc",
+    "quic/moqt/moqt_outgoing_queue_test.cc",
+    "quic/moqt/moqt_parser_test.cc",
+    "quic/moqt/moqt_priority_test.cc",
+    "quic/moqt/moqt_probe_manager_test.cc",
+    "quic/moqt/moqt_session_test.cc",
+    "quic/moqt/moqt_subscribe_windows_test.cc",
+    "quic/moqt/moqt_track_test.cc",
+]
+
+moqt_client_hdrs = [
+    "quic/moqt/tools/moqt_client.h",
+]
+
+moqt_server_hdrs = [
+    "quic/moqt/tools/moqt_server.h",
+]
+
+moqt_client_srcs = [
+    "quic/moqt/tools/moqt_client.cc",
+]
+
+moqt_server_srcs = [
+    "quic/moqt/tools/moqt_server.cc",
+]
+
 binary_http_hdrs = [
     "binary_http/binary_http_message.h",
 ]

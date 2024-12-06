@@ -31,7 +31,7 @@ quiche::ReadStream::ReadResult InMemoryStream::Read(std::string* output) {
   ReadResult result;
   result.bytes_read = buffer_.size();
   result.fin = fin_received_;
-  absl::AppendCordToString(buffer_, output);
+  //absl::AppendCordToString(buffer_, output);
   buffer_.Clear();
   return result;
 }
