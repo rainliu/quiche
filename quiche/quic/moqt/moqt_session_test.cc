@@ -231,7 +231,7 @@ TEST_F(MoqtSessionTest, AddLocalTrack) {
   stream_input->OnSubscribeMessage(request);
 }
 
-TEST_F(MoqtSessionTest, AnnounceWithOk) {
+TEST_F(MoqtSessionTest, AnnounceWithOkAndCancel) {
   testing::MockFunction<void(
       FullTrackName track_namespace,
       std::optional<MoqtAnnounceErrorReason> error_message)>
@@ -255,6 +255,56 @@ TEST_F(MoqtSessionTest, AnnounceWithOk) {
         EXPECT_FALSE(error.has_value());
       });
   stream_input->OnAnnounceOkMessage(ok);
+
+  MoqtAnnounceCancel cancel = {
+      /*track_namespace=*/FullTrackName{"foo"},
+      /*error_code=*/MoqtAnnounceErrorCode::kInternalError,
+      /*reason_phrase=*/"Test error",
+  };
+  EXPECT_CALL(announce_resolved_callback, Call(_, _))
+      .WillOnce([&](FullTrackName track_namespace,
+                    std::optional<MoqtAnnounceErrorReason> error) {
+        EXPECT_EQ(track_namespace, FullTrackName{"foo"});
+        ASSERT_TRUE(error.has_value());
+        EXPECT_EQ(error->error_code, MoqtAnnounceErrorCode::kInternalError);
+        EXPECT_EQ(error->reason_phrase, "Test error");
+      });
+  stream_input->OnAnnounceCancelMessage(cancel);
+  // State is gone.
+  EXPECT_FALSE(session_.Unannounce(FullTrackName{"foo"}));
+}
+
+TEST_F(MoqtSessionTest, AnnounceWithOkAndUnannounce) {
+  testing::MockFunction<void(
+      FullTrackName track_namespace,
+      std::optional<MoqtAnnounceErrorReason> error_message)>
+      announce_resolved_callback;
+  webtransport::test::MockStream mock_stream;
+  std::unique_ptr<MoqtControlParserVisitor> stream_input =
+      MoqtSessionPeer::CreateControlStream(&session_, &mock_stream);
+  EXPECT_CALL(mock_session_, GetStreamById(_)).WillOnce(Return(&mock_stream));
+  EXPECT_CALL(mock_stream,
+              Writev(ControlMessageOfType(MoqtMessageType::kAnnounce), _));
+  session_.Announce(FullTrackName{"foo"},
+                    announce_resolved_callback.AsStdFunction());
+
+  MoqtAnnounceOk ok = {
+      /*track_namespace=*/FullTrackName{"foo"},
+  };
+  EXPECT_CALL(announce_resolved_callback, Call(_, _))
+      .WillOnce([&](FullTrackName track_namespace,
+                    std::optional<MoqtAnnounceErrorReason> error) {
+        EXPECT_EQ(track_namespace, FullTrackName{"foo"});
+        EXPECT_FALSE(error.has_value());
+      });
+  stream_input->OnAnnounceOkMessage(ok);
+
+  EXPECT_CALL(mock_session_, GetStreamById(_)).WillOnce(Return(&mock_stream));
+  EXPECT_CALL(mock_stream,
+              Writev(ControlMessageOfType(MoqtMessageType::kUnannounce), _));
+  session_.Unannounce(FullTrackName{"foo"});
+  // State is gone.
+  EXPECT_FALSE(session_.Unannounce(FullTrackName{"foo"}));
 }
 
 TEST_F(MoqtSessionTest, AnnounceWithError) {
@@ -285,6 +335,8 @@ TEST_F(MoqtSessionTest, AnnounceWithError) {
         EXPECT_EQ(error->reason_phrase, "Test error");
       });
   stream_input->OnAnnounceErrorMessage(error);
+  // State is gone.
+  EXPECT_FALSE(session_.Unannounce(FullTrackName{"foo"}));
 }
 
 TEST_F(MoqtSessionTest, SubscribeForPast) {
@@ -622,21 +674,137 @@ TEST_F(MoqtSessionTest, Unsubscribe) {
   EXPECT_EQ(MoqtSessionPeer::remote_track(&session_, 2), nullptr);
 }
 
-TEST_F(MoqtSessionTest, ReplyToAnnounce) {
+TEST_F(MoqtSessionTest, ReplyToAnnounceWithOkThenUnannounce) {
+  FullTrackName track_namespace{"foo"};
   webtransport::test::MockStream mock_stream;
   std::unique_ptr<MoqtControlParserVisitor> stream_input =
       MoqtSessionPeer::CreateControlStream(&session_, &mock_stream);
   MoqtAnnounce announce = {
-      /*track_namespace=*/FullTrackName{"foo"},
+      track_namespace,
   };
   EXPECT_CALL(session_callbacks_.incoming_announce_callback,
-              Call(FullTrackName{"foo"}))
+              Call(track_namespace, AnnounceEvent::kAnnounce))
       .WillOnce(Return(std::nullopt));
   EXPECT_CALL(
       mock_stream,
-      Writev(SerializedControlMessage(MoqtAnnounceOk{FullTrackName{"foo"}}),
+      Writev(SerializedControlMessage(MoqtAnnounceOk{track_namespace}), _));
+  stream_input->OnAnnounceMessage(announce);
+  MoqtUnannounce unannounce = {
+      track_namespace,
+  };
+  EXPECT_CALL(session_callbacks_.incoming_announce_callback,
+              Call(track_namespace, AnnounceEvent::kUnannounce))
+      .WillOnce(Return(std::nullopt));
+  stream_input->OnUnannounceMessage(unannounce);
+}
+
+TEST_F(MoqtSessionTest, ReplyToAnnounceWithOkThenAnnounceCancel) {
+  FullTrackName track_namespace{"foo"};
+  webtransport::test::MockStream mock_stream;
+  std::unique_ptr<MoqtControlParserVisitor> stream_input =
+      MoqtSessionPeer::CreateControlStream(&session_, &mock_stream);
+  MoqtAnnounce announce = {
+      track_namespace,
+  };
+  EXPECT_CALL(session_callbacks_.incoming_announce_callback,
+              Call(track_namespace, AnnounceEvent::kAnnounce))
+      .WillOnce(Return(std::nullopt));
+  EXPECT_CALL(
+      mock_stream,
+      Writev(SerializedControlMessage(MoqtAnnounceOk{track_namespace}), _));
+  stream_input->OnAnnounceMessage(announce);
+  EXPECT_CALL(mock_stream,
+              Writev(SerializedControlMessage(MoqtAnnounceCancel{
+                         track_namespace, MoqtAnnounceErrorCode::kInternalError,
+                         "deadbeef"}),
+                     _));
+  session_.CancelAnnounce(track_namespace,
+                          MoqtAnnounceErrorCode::kInternalError, "deadbeef");
+}
+
+TEST_F(MoqtSessionTest, ReplyToAnnounceWithError) {
+  FullTrackName track_namespace{"foo"};
+  webtransport::test::MockStream mock_stream;
+  std::unique_ptr<MoqtControlParserVisitor> stream_input =
+      MoqtSessionPeer::CreateControlStream(&session_, &mock_stream);
+  MoqtAnnounce announce = {
+      track_namespace,
+  };
+  MoqtAnnounceErrorReason error = {
+      MoqtAnnounceErrorCode::kAnnounceNotSupported,
+      "deadbeef",
+  };
+  EXPECT_CALL(session_callbacks_.incoming_announce_callback,
+              Call(track_namespace, AnnounceEvent::kAnnounce))
+      .WillOnce(Return(error));
+  EXPECT_CALL(
+      mock_stream,
+      Writev(SerializedControlMessage(MoqtAnnounceError{
+                 track_namespace, error.error_code, error.reason_phrase}),
              _));
   stream_input->OnAnnounceMessage(announce);
+}
+
+TEST_F(MoqtSessionTest, SubscribeAnnouncesLifeCycle) {
+  webtransport::test::MockStream mock_stream;
+  std::unique_ptr<MoqtControlParserVisitor> stream_input =
+      MoqtSessionPeer::CreateControlStream(&session_, &mock_stream);
+  FullTrackName track_namespace("foo", "bar");
+  track_namespace.NameToNamespace();
+  bool got_callback = false;
+  EXPECT_CALL(
+      mock_stream,
+      Writev(ControlMessageOfType(MoqtMessageType::kSubscribeAnnounces), _));
+  session_.SubscribeAnnounces(
+      track_namespace,
+      [&](const FullTrackName& ftn, std::optional<SubscribeErrorCode> error,
+          absl::string_view reason) {
+        got_callback = true;
+        EXPECT_EQ(track_namespace, ftn);
+        EXPECT_FALSE(error.has_value());
+        EXPECT_EQ(reason, "");
+      });
+  MoqtSubscribeAnnouncesOk ok = {
+      /*track_namespace=*/track_namespace,
+  };
+  stream_input->OnSubscribeAnnouncesOkMessage(ok);
+  EXPECT_TRUE(got_callback);
+  EXPECT_CALL(
+      mock_stream,
+      Writev(ControlMessageOfType(MoqtMessageType::kUnsubscribeAnnounces), _));
+  EXPECT_TRUE(session_.UnsubscribeAnnounces(track_namespace));
+  EXPECT_FALSE(session_.UnsubscribeAnnounces(track_namespace));
+}
+
+TEST_F(MoqtSessionTest, SubscribeAnnouncesError) {
+  webtransport::test::MockStream mock_stream;
+  std::unique_ptr<MoqtControlParserVisitor> stream_input =
+      MoqtSessionPeer::CreateControlStream(&session_, &mock_stream);
+  FullTrackName track_namespace("foo", "bar");
+  track_namespace.NameToNamespace();
+  bool got_callback = false;
+  EXPECT_CALL(
+      mock_stream,
+      Writev(ControlMessageOfType(MoqtMessageType::kSubscribeAnnounces), _));
+  session_.SubscribeAnnounces(
+      track_namespace,
+      [&](const FullTrackName& ftn, std::optional<SubscribeErrorCode> error,
+          absl::string_view reason) {
+        got_callback = true;
+        EXPECT_EQ(track_namespace, ftn);
+        ASSERT_TRUE(error.has_value());
+        EXPECT_EQ(*error, SubscribeErrorCode::kInvalidRange);
+        EXPECT_EQ(reason, "deadbeef");
+      });
+  MoqtSubscribeAnnouncesError error = {
+      /*track_namespace=*/track_namespace,
+      /*error_code=*/SubscribeErrorCode::kInvalidRange,
+      /*reason_phrase=*/"deadbeef",
+  };
+  stream_input->OnSubscribeAnnouncesErrorMessage(error);
+  EXPECT_TRUE(got_callback);
+  // Entry is immediately gone.
+  EXPECT_FALSE(session_.UnsubscribeAnnounces(track_namespace));
 }
 
 TEST_F(MoqtSessionTest, IncomingObject) {
@@ -1987,6 +2155,51 @@ TEST_F(MoqtSessionTest, FetchNonNormalObjects) {
       }));
   stream_visitor->OnCanWrite();
   EXPECT_EQ(objects_received, 2);
+}
+
+TEST_F(MoqtSessionTest, IncomingSubscribeAnnounces) {
+  FullTrackName track_namespace = FullTrackName{"foo"};
+  MoqtSubscribeAnnounces announces = {
+      track_namespace,
+      /*parameters=*/MoqtSubscribeParameters(),
+  };
+  webtransport::test::MockStream control_stream;
+  std::unique_ptr<MoqtControlParserVisitor> stream_input =
+      MoqtSessionPeer::CreateControlStream(&session_, &control_stream);
+  EXPECT_CALL(session_callbacks_.incoming_subscribe_announces_callback,
+              Call(_, SubscribeEvent::kSubscribe))
+      .WillOnce(Return(std::nullopt));
+  EXPECT_CALL(
+      control_stream,
+      Writev(ControlMessageOfType(MoqtMessageType::kSubscribeAnnouncesOk), _));
+  stream_input->OnSubscribeAnnouncesMessage(announces);
+  MoqtUnsubscribeAnnounces unsubscribe_announces = {
+      /*track_namespace=*/FullTrackName{"foo"},
+  };
+  EXPECT_CALL(session_callbacks_.incoming_subscribe_announces_callback,
+              Call(track_namespace, SubscribeEvent::kUnsubscribe))
+      .WillOnce(Return(std::nullopt));
+  stream_input->OnUnsubscribeAnnouncesMessage(unsubscribe_announces);
+}
+
+TEST_F(MoqtSessionTest, IncomingSubscribeAnnouncesWithError) {
+  FullTrackName track_namespace = FullTrackName{"foo"};
+  MoqtSubscribeAnnounces announces = {
+      track_namespace,
+      /*parameters=*/MoqtSubscribeParameters(),
+  };
+  webtransport::test::MockStream control_stream;
+  std::unique_ptr<MoqtControlParserVisitor> stream_input =
+      MoqtSessionPeer::CreateControlStream(&session_, &control_stream);
+  EXPECT_CALL(session_callbacks_.incoming_subscribe_announces_callback,
+              Call(_, SubscribeEvent::kSubscribe))
+      .WillOnce(Return(
+          MoqtSubscribeErrorReason{SubscribeErrorCode::kUnauthorized, "foo"}));
+  EXPECT_CALL(
+      control_stream,
+      Writev(ControlMessageOfType(MoqtMessageType::kSubscribeAnnouncesError),
+             _));
+  stream_input->OnSubscribeAnnouncesMessage(announces);
 }
 
 // TODO: re-enable this test once this behavior is re-implemented.

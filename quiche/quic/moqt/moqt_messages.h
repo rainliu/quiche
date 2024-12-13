@@ -158,6 +158,20 @@ enum class MoqtAnnounceErrorCode : uint64_t {
   kAnnounceNotSupported = 1,
 };
 
+enum class QUICHE_EXPORT SubscribeErrorCode : uint64_t {
+  kInternalError = 0x0,
+  kInvalidRange = 0x1,
+  kRetryTrackAlias = 0x2,
+  kTrackDoesNotExist = 0x3,
+  kUnauthorized = 0x4,
+  kTimeout = 0x5,
+};
+
+struct MoqtSubscribeErrorReason {
+  SubscribeErrorCode error_code;
+  std::string reason_phrase;
+};
+
 struct MoqtAnnounceErrorReason {
   MoqtAnnounceErrorCode error_code;
   std::string reason_phrase;
@@ -397,15 +411,6 @@ struct QUICHE_EXPORT MoqtSubscribeOk {
   MoqtSubscribeParameters parameters;
 };
 
-enum class QUICHE_EXPORT SubscribeErrorCode : uint64_t {
-  kInternalError = 0x0,
-  kInvalidRange = 0x1,
-  kRetryTrackAlias = 0x2,
-  kTrackDoesNotExist = 0x3,
-  kUnauthorized = 0x4,
-  kTimeout = 0x5,
-};
-
 struct QUICHE_EXPORT MoqtSubscribeError {
   uint64_t subscribe_id;
   SubscribeErrorCode error_code;
@@ -493,8 +498,7 @@ struct QUICHE_EXPORT MoqtTrackStatus {
 
 struct QUICHE_EXPORT MoqtAnnounceCancel {
   FullTrackName track_namespace;
-  // TODO: What namespace is this error code in?
-  uint64_t error_code;
+  MoqtAnnounceErrorCode error_code;
   std::string reason_phrase;
 };
 
@@ -517,7 +521,7 @@ struct QUICHE_EXPORT MoqtSubscribeAnnouncesOk {
 
 struct QUICHE_EXPORT MoqtSubscribeAnnouncesError {
   FullTrackName track_namespace;
-  MoqtAnnounceErrorCode error_code;
+  SubscribeErrorCode error_code;
   std::string reason_phrase;
 };
 

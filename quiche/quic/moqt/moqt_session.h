@@ -42,20 +42,47 @@ using MoqtSessionEstablishedCallback = quiche::SingleUseCallback<void()>;
 using MoqtSessionTerminatedCallback =
     quiche::SingleUseCallback<void(absl::string_view error_message)>;
 using MoqtSessionDeletedCallback = quiche::SingleUseCallback<void()>;
-// If |error_message| is nullopt, the ANNOUNCE was successful.
-using MoqtOutgoingAnnounceCallback = quiche::SingleUseCallback<void(
+
+enum class SubscribeEvent { kSubscribe, kUnsubscribe };
+enum class AnnounceEvent { kAnnounce, kUnannounce };
+
+// If |error_message| is nullopt, this is triggered by an ANNOUNCE_OK.
+// Otherwise, it is triggered by ANNOUNCE_ERROR or ANNOUNCE_CANCEL. For
+// ERROR or CANCEL, MoqtSession is deleting all ANNOUNCE state immediately
+// after calling this callback. Alternatively, the application can call
+// Unannounce() to delete the state.
+using MoqtOutgoingAnnounceCallback = quiche::MultiUseCallback<void(
     FullTrackName track_namespace,
     std::optional<MoqtAnnounceErrorReason> error)>;
 using MoqtIncomingAnnounceCallback =
     quiche::MultiUseCallback<std::optional<MoqtAnnounceErrorReason>(
-        FullTrackName track_namespace)>;
+        const FullTrackName& track_namespace, AnnounceEvent announce_type)>;
+using MoqtOutgoingSubscribeAnnouncesCallback = quiche::SingleUseCallback<void(
+    FullTrackName track_namespace, std::optional<SubscribeErrorCode> error,
+    absl::string_view reason)>;
+// If the return value is nullopt, the Session will respond with
+// SUBSCRIBE_ANNOUNCES_OK. Otherwise, it will respond with
+// SUBSCRIBE_ANNOUNCES_ERROR.
+// If |subscribe_type| is kUnsubscribe, this is an UNSUBSCRIBE_ANNOUNCES message
+// and the return value will be ignored.
+using MoqtIncomingSubscribeAnnouncesCallback =
+    quiche::MultiUseCallback<std::optional<MoqtSubscribeErrorReason>(
+        const FullTrackName& track_namespace, SubscribeEvent subscribe_type)>;
 
 inline std::optional<MoqtAnnounceErrorReason> DefaultIncomingAnnounceCallback(
-    FullTrackName /*track_namespace*/) {
+    const FullTrackName& /*track_namespace*/, AnnounceEvent /*announce*/) {
   return std::optional(MoqtAnnounceErrorReason{
       MoqtAnnounceErrorCode::kAnnounceNotSupported,
       "This endpoint does not accept incoming ANNOUNCE messages"});
 };
+
+inline std::optional<MoqtSubscribeErrorReason>
+DefaultIncomingSubscribeAnnouncesCallback(const FullTrackName& track_namespace,
+                                          SubscribeEvent /*subscribe_type*/) {
+  return MoqtSubscribeErrorReason{
+      SubscribeErrorCode::kUnauthorized,
+      "This endpoint does not support incoming SUBSCRIBE_ANNOUNCES messages"};
+}
 
 // Callbacks for session-level events.
 struct MoqtSessionCallbacks {
@@ -66,6 +93,8 @@ struct MoqtSessionCallbacks {
 
   MoqtIncomingAnnounceCallback incoming_announce_callback =
       DefaultIncomingAnnounceCallback;
+  MoqtIncomingSubscribeAnnouncesCallback incoming_subscribe_announces_callback =
+      DefaultIncomingSubscribeAnnouncesCallback;
 };
 
 struct SubscriptionWithQueuedStream {
@@ -106,11 +135,24 @@ class QUICHE_EXPORT MoqtSession : public webtransport::SessionVisitor {
 
   quic::Perspective perspective() const { return parameters_.perspective; }
 
+  // Returns true if message was sent.
+  bool SubscribeAnnounces(
+      FullTrackName track_namespace,
+      MoqtOutgoingSubscribeAnnouncesCallback callback,
+      MoqtSubscribeParameters parameters = MoqtSubscribeParameters());
+  bool UnsubscribeAnnounces(FullTrackName track_namespace);
+
   // Send an ANNOUNCE message for |track_namespace|, and call
   // |announce_callback| when the response arrives. Will fail immediately if
   // there is already an unresolved ANNOUNCE for that namespace.
   void Announce(FullTrackName track_namespace,
                 MoqtOutgoingAnnounceCallback announce_callback);
+  // Returns true if message was sent, false if there is no ANNOUNCE to cancel.
+  bool Unannounce(FullTrackName track_namespace);
+  // Allows the subscriber to declare it will not subscribe to |track_namespace|
+  // anymore.
+  void CancelAnnounce(FullTrackName track_namespace, MoqtAnnounceErrorCode code,
+                      absl::string_view reason_phrase);
 
   // Returns true if SUBSCRIBE was sent. If there is already a subscription to
   // the track, the message will still be sent. However, the visitor will be
@@ -208,17 +250,17 @@ class QUICHE_EXPORT MoqtSession : public webtransport::SessionVisitor {
     void OnAnnounceCancelMessage(const MoqtAnnounceCancel& message) override;
     void OnTrackStatusRequestMessage(
         const MoqtTrackStatusRequest& message) override {};
-    void OnUnannounceMessage(const MoqtUnannounce& /*message*/) override {}
+    void OnUnannounceMessage(const MoqtUnannounce& /*message*/) override;
     void OnTrackStatusMessage(const MoqtTrackStatus& message) override {}
     void OnGoAwayMessage(const MoqtGoAway& /*message*/) override {}
     void OnSubscribeAnnouncesMessage(
-        const MoqtSubscribeAnnounces& message) override {}
+        const MoqtSubscribeAnnounces& message) override;
     void OnSubscribeAnnouncesOkMessage(
-        const MoqtSubscribeAnnouncesOk& message) override {}
+        const MoqtSubscribeAnnouncesOk& message) override;
     void OnSubscribeAnnouncesErrorMessage(
-        const MoqtSubscribeAnnouncesError& message) override {}
+        const MoqtSubscribeAnnouncesError& message) override;
     void OnUnsubscribeAnnouncesMessage(
-        const MoqtUnsubscribeAnnounces& message) override {}
+        const MoqtUnsubscribeAnnounces& message) override;
     void OnMaxSubscribeIdMessage(const MoqtMaxSubscribeId& message) override;
     void OnFetchMessage(const MoqtFetch& message) override;
     void OnFetchCancelMessage(const MoqtFetchCancel& message) override {}
@@ -606,9 +648,17 @@ class QUICHE_EXPORT MoqtSession : public webtransport::SessionVisitor {
   absl::flat_hash_map<FullTrackName, MoqtPublishingMonitorInterface*>
       monitoring_interfaces_for_published_tracks_;
 
-  // Indexed by track namespace.
+  // Indexed by track namespace. If the value is not nullptr, no OK or ERROR
+  // has been received. The entry is deleted after sending UNANNOUNCE or
+  // receiving ANNOUNCE_CANCEL.
   absl::flat_hash_map<FullTrackName, MoqtOutgoingAnnounceCallback>
-      pending_outgoing_announces_;
+      outgoing_announces_;
+  // The value is nullptr after OK or ERROR is received. The entry is deleted
+  // when sending UNSUBSCRIBE_ANNOUNCES, to make sure the application doesn't
+  // unsubscribe from something that it isn't subscribed to. ANNOUNCEs that
+  // result from this subscription use incoming_announce_callback.
+  absl::flat_hash_map<FullTrackName, MoqtOutgoingSubscribeAnnouncesCallback>
+      outgoing_subscribe_announces_;
 
   // The role the peer advertised in its SETUP message. Initialize it to avoid
   // an uninitialized value if no SETUP arrives or it arrives with no Role
